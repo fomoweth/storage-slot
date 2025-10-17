@@ -1,219 +1,278 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {StorageSlot, AddressSlot, BooleanSlot, Bytes32Slot, Uint256Slot, Int256Slot, BytesSlot, StringSlot} from "src/StorageSlot.sol";
-import {SlotDerivation} from "src/SlotDerivation.sol";
+import {
+    AddressSlot,
+    BooleanSlot,
+    Bytes32Slot,
+    Uint256Slot,
+    Int256Slot,
+    BytesSlot,
+    StringSlot,
+    StorageSlot
+} from "src/StorageSlot.sol";
 
 contract StorageSlotTest is Test {
-	using StorageSlot for uint256;
-	using SlotDerivation for uint256;
+    uint256 internal constant LENGTH_MASK = 0xffffffff;
 
-	AddressSlot internal immutable ADDRESS_SLOT = SlotDerivation.erc7201Slot("ADDRESS_SLOT").asAddressSlot();
-	BooleanSlot internal immutable BOOLEAN_SLOT = SlotDerivation.erc7201Slot("BOOLEAN_SLOT").asBooleanSlot();
-	Bytes32Slot internal immutable BYTES32_SLOT = SlotDerivation.erc7201Slot("BYTES32_SLOT").asBytes32Slot();
-	Uint256Slot internal immutable UINT256_SLOT = SlotDerivation.erc7201Slot("UINT256_SLOT").asUint256Slot();
-	Int256Slot internal immutable INT256_SLOT = SlotDerivation.erc7201Slot("INT256_SLOT").asInt256Slot();
-	BytesSlot internal immutable BYTES_SLOT = SlotDerivation.erc7201Slot("BYTES_SLOT").asBytesSlot();
-	StringSlot internal immutable STRING_SLOT = SlotDerivation.erc7201Slot("STRING_SLOT").asStringSlot();
+    AddressSlot internal constant ADDRESS_SLOT = AddressSlot.wrap("ADDRESS_SLOT");
+    BooleanSlot internal constant BOOLEAN_SLOT = BooleanSlot.wrap("BOOLEAN_SLOT");
+    Bytes32Slot internal constant BYTES32_SLOT = Bytes32Slot.wrap("BYTES32_SLOT");
+    Uint256Slot internal constant UINT256_SLOT = Uint256Slot.wrap("UINT256_SLOT");
+    Int256Slot internal constant INT256_SLOT = Int256Slot.wrap("INT256_SLOT");
+    BytesSlot internal constant BYTES_SLOT = BytesSlot.wrap("BYTES_SLOT");
+    StringSlot internal constant STRING_SLOT = StringSlot.wrap("STRING_SLOT");
 
-	function test_fuzz_persistent_storage_address(address x) public {
-		assertEq(ADDRESS_SLOT.sload(), address(0));
-		assertStorageSlot(x, false);
-	}
+    function test_fuzz_persistent_storage_address(address value) public {
+        assertSlotEmpty(ADDRESS_SLOT, false);
+        testStore(ADDRESS_SLOT, value, false);
+        testStore(ADDRESS_SLOT, address(0), false);
+        assertSlotEmpty(ADDRESS_SLOT, false);
+    }
 
-	function test_fuzz_persistent_storage_boolean(bool x) public {
-		assertFalse(BOOLEAN_SLOT.sload());
-		assertStorageSlot(x, false);
-	}
+    function test_fuzz_persistent_storage_boolean(bool value) public {
+        assertSlotEmpty(BOOLEAN_SLOT, false);
+        testStore(BOOLEAN_SLOT, value, false);
+        testStore(BOOLEAN_SLOT, !value, false);
+    }
 
-	function test_fuzz_persistent_storage_bytes32(bytes32 x) public {
-		assertEq(BYTES32_SLOT.sload(), bytes32(0));
-		assertStorageSlot(x, false);
-	}
+    function test_fuzz_persistent_storage_bytes32(bytes32 value) public {
+        assertSlotEmpty(BYTES32_SLOT, false);
+        testStore(BYTES32_SLOT, value, false);
+        testStore(BYTES32_SLOT, bytes32(0), false);
+        assertSlotEmpty(BYTES32_SLOT, false);
+    }
 
-	function test_fuzz_persistent_storage_uint256(uint256 x) public {
-		assertEq(UINT256_SLOT.sload(), uint256(0));
-		assertStorageSlot(x, false);
-	}
+    function test_fuzz_persistent_storage_uint256(uint256 value) public {
+        assertSlotEmpty(UINT256_SLOT, false);
+        testStore(UINT256_SLOT, value, false);
+        testStore(UINT256_SLOT, uint256(0), false);
+        assertSlotEmpty(UINT256_SLOT, false);
+    }
 
-	function test_fuzz_persistent_storage_int256(int256 x) public {
-		assertEq(INT256_SLOT.sload(), int256(0));
-		assertStorageSlot(x, false);
-	}
+    function test_fuzz_persistent_storage_int256(int256 value) public {
+        assertSlotEmpty(INT256_SLOT, false);
+        testStore(INT256_SLOT, value, false);
+        testStore(INT256_SLOT, int256(0), false);
+        assertSlotEmpty(INT256_SLOT, false);
+    }
 
-	function test_fuzz_persistent_storage_bytes(bytes memory x) public {
-		assertEq(BYTES_SLOT.slength(), uint256(0));
-		assertStorageSlot(x, false);
-	}
+    function test_fuzz_persistent_storage_bytes(bytes memory value) public {
+        assertSlotEmpty(BYTES_SLOT, false);
+        testStore(BYTES_SLOT, value, false);
+        testStore(BYTES_SLOT, new bytes(0), false);
+        assertSlotEmpty(BYTES_SLOT, false);
+    }
 
-	function test_fuzz_persistent_storage_string(string memory x) public {
-		assertEq(STRING_SLOT.slength(), uint256(0));
-		assertStorageSlot(x, false);
-	}
+    function test_fuzz_persistent_storage_string(string memory value) public {
+        assertSlotEmpty(STRING_SLOT, false);
+        testStore(STRING_SLOT, value, false);
+        testStore(STRING_SLOT, new string(0), false);
+        assertSlotEmpty(STRING_SLOT, false);
+    }
 
-	function test_fuzz_transient_storage_address(address x) public {
-		assertEq(ADDRESS_SLOT.tload(), address(0));
-		assertStorageSlot(x, true);
-		assertAddressSlotClear();
-	}
+    function test_fuzz_transient_storage_address(address value) public {
+        assertSlotEmpty(ADDRESS_SLOT, true);
+        testStore(ADDRESS_SLOT, value, true);
+        ADDRESS_SLOT.tclear();
+        assertSlotEmpty(ADDRESS_SLOT, true);
+    }
 
-	function test_fuzz_transient_storage_boolean(bool x) public {
-		assertFalse(BOOLEAN_SLOT.tload());
-		assertStorageSlot(x, true);
-		assertBooleanSlotClear();
-	}
+    function test_fuzz_transient_storage_boolean(bool value) public {
+        assertSlotEmpty(BOOLEAN_SLOT, true);
+        testStore(BOOLEAN_SLOT, value, true);
+        BOOLEAN_SLOT.tclear();
+        assertSlotEmpty(BOOLEAN_SLOT, true);
+    }
 
-	function test_fuzz_transient_storage_bytes32(bytes32 x) public {
-		assertEq(BYTES32_SLOT.tload(), bytes32(0));
-		assertStorageSlot(x, true);
-		assertBytes32SlotClear();
-	}
+    function test_fuzz_transient_storage_bytes32(bytes32 value) public {
+        assertSlotEmpty(BYTES32_SLOT, true);
+        testStore(BYTES32_SLOT, value, true);
+        BYTES32_SLOT.tclear();
+        assertSlotEmpty(BYTES32_SLOT, true);
+    }
 
-	function test_fuzz_transient_storage_uint256(uint256 x) public {
-		assertEq(UINT256_SLOT.tload(), uint256(0));
-		assertStorageSlot(x, true);
-		assertUint256SlotClear();
-	}
+    function test_fuzz_transient_storage_uint256(uint256 value) public {
+        assertSlotEmpty(UINT256_SLOT, true);
+        testStore(UINT256_SLOT, value, true);
+        UINT256_SLOT.tclear();
+        assertSlotEmpty(UINT256_SLOT, true);
+    }
 
-	function test_fuzz_transient_storage_int256(int256 x) public {
-		assertEq(INT256_SLOT.tload(), int256(0));
-		assertStorageSlot(x, true);
-		assertInt256SlotClear();
-	}
+    function test_fuzz_transient_storage_int256(int256 value) public {
+        assertSlotEmpty(INT256_SLOT, true);
+        testStore(INT256_SLOT, value, true);
+        INT256_SLOT.tclear();
+        assertSlotEmpty(INT256_SLOT, true);
+    }
 
-	function test_fuzz_transient_storage_bytes(bytes memory x) public {
-		assertEq(BYTES_SLOT.tlength(), uint256(0));
-		assertStorageSlot(x, true);
-		assertBytesSlotClear();
-	}
+    function test_fuzz_transient_storage_bytes(bytes memory value) public {
+        assertSlotEmpty(BYTES_SLOT, true);
+        testStore(BYTES_SLOT, value, true);
+        BYTES_SLOT.tclear();
+        assertSlotEmpty(BYTES_SLOT, true);
+    }
 
-	function test_fuzz_transient_storage_string(string memory x) public {
-		assertEq(STRING_SLOT.tlength(), uint256(0));
-		assertStorageSlot(x, true);
-		assertStringSlotClear();
-	}
+    function test_fuzz_transient_storage_string(string memory value) public {
+        assertSlotEmpty(STRING_SLOT, true);
+        testStore(STRING_SLOT, value, true);
+        STRING_SLOT.tclear();
+        assertSlotEmpty(STRING_SLOT, true);
+    }
 
-	function assertStorageSlot(address x, bool isTransient) internal {
-		if (isTransient) {
-			ADDRESS_SLOT.tstore(x);
-			assertEq(ADDRESS_SLOT.tload(), x);
-		} else {
-			ADDRESS_SLOT.sstore(x);
-			assertEq(ADDRESS_SLOT.sload(), x);
-		}
-	}
+    function testStore(AddressSlot slot, address value, bool isTransient) internal {
+        if (isTransient) {
+            slot.tstore(value);
+            assertEq(slot.tload(), value);
+        } else {
+            slot.sstore(value);
+            assertEq(slot.sload(), value);
+        }
+    }
 
-	function assertStorageSlot(bool x, bool isTransient) internal {
-		if (isTransient) {
-			BOOLEAN_SLOT.tstore(x);
-			assertEq(BOOLEAN_SLOT.tload(), x);
-		} else {
-			BOOLEAN_SLOT.sstore(x);
-			assertEq(BOOLEAN_SLOT.sload(), x);
-		}
-	}
+    function testStore(BooleanSlot slot, bool value, bool isTransient) internal {
+        if (isTransient) {
+            slot.tstore(value);
+            assertEq(slot.tload(), value);
+        } else {
+            slot.sstore(value);
+            assertEq(slot.sload(), value);
+        }
+    }
 
-	function assertStorageSlot(bytes32 x, bool isTransient) internal {
-		if (isTransient) {
-			BYTES32_SLOT.tstore(x);
-			assertEq(BYTES32_SLOT.tload(), x);
-		} else {
-			BYTES32_SLOT.sstore(x);
-			assertEq(BYTES32_SLOT.sload(), x);
-		}
-	}
+    function testStore(Bytes32Slot slot, bytes32 value, bool isTransient) internal {
+        if (isTransient) {
+            slot.tstore(value);
+            assertEq(slot.tload(), value);
+        } else {
+            slot.sstore(value);
+            assertEq(slot.sload(), value);
+        }
+    }
 
-	function assertStorageSlot(uint256 x, bool isTransient) internal {
-		if (isTransient) {
-			UINT256_SLOT.tstore(x);
-			assertEq(UINT256_SLOT.tload(), x);
-		} else {
-			UINT256_SLOT.sstore(x);
-			assertEq(UINT256_SLOT.sload(), x);
-		}
-	}
+    function testStore(Uint256Slot slot, uint256 value, bool isTransient) internal {
+        if (isTransient) {
+            slot.tstore(value);
+            assertEq(slot.tload(), value);
+        } else {
+            slot.sstore(value);
+            assertEq(slot.sload(), value);
+        }
+    }
 
-	function assertStorageSlot(int256 x, bool isTransient) internal {
-		if (isTransient) {
-			INT256_SLOT.tstore(x);
-			assertEq(INT256_SLOT.tload(), x);
-		} else {
-			INT256_SLOT.sstore(x);
-			assertEq(INT256_SLOT.sload(), x);
-		}
-	}
+    function testStore(Int256Slot slot, int256 value, bool isTransient) internal {
+        if (isTransient) {
+            slot.tstore(value);
+            assertEq(slot.tload(), value);
+        } else {
+            slot.sstore(value);
+            assertEq(slot.sload(), value);
+        }
+    }
 
-	function assertStorageSlot(bytes memory x, bool isTransient) internal {
-		if (x.length > StorageSlot.LENGTH_MASK) {
-			vm.expectRevert(StorageSlot.ExceededMaxDataLength.selector);
-			if (isTransient) BYTES_SLOT.tstore(x);
-			else BYTES_SLOT.sstore(x);
-			return;
-		}
+    function testStore(BytesSlot slot, bytes memory value, bool isTransient) internal {
+        if (value.length > LENGTH_MASK) {
+            vm.expectRevert(StorageSlot.ExceededMaxDataLength.selector);
+            if (isTransient) slot.tstore(value);
+            else slot.sstore(value);
+            return;
+        }
 
-		if (isTransient) {
-			BYTES_SLOT.tstore(x);
-			assertEq(BYTES_SLOT.tlength(), x.length);
-			assertEq(BYTES_SLOT.tload(), x);
-		} else {
-			BYTES_SLOT.sstore(x);
-			assertEq(BYTES_SLOT.slength(), x.length);
-			assertEq(BYTES_SLOT.sload(), x);
-		}
-	}
+        if (isTransient) {
+            slot.tstore(value);
+            assertEq(slot.tlength(), value.length);
+            assertEq(slot.tload(), value);
+        } else {
+            slot.sstore(value);
+            assertEq(slot.slength(), value.length);
+            assertEq(slot.sload(), value);
+        }
+    }
 
-	function assertStorageSlot(string memory x, bool isTransient) internal {
-		if (bytes(x).length > StorageSlot.LENGTH_MASK) {
-			vm.expectRevert(StorageSlot.ExceededMaxDataLength.selector);
-			if (isTransient) STRING_SLOT.tstore(x);
-			else STRING_SLOT.sstore(x);
-			return;
-		}
+    function testStore(StringSlot slot, string memory value, bool isTransient) internal {
+        if (bytes(value).length > LENGTH_MASK) {
+            vm.expectRevert(StorageSlot.ExceededMaxDataLength.selector);
+            if (isTransient) slot.tstore(value);
+            else slot.sstore(value);
+            return;
+        }
 
-		if (isTransient) {
-			STRING_SLOT.tstore(x);
-			assertEq(STRING_SLOT.tlength(), bytes(x).length);
-			assertEq(STRING_SLOT.tload(), x);
-		} else {
-			STRING_SLOT.sstore(x);
-			assertEq(STRING_SLOT.slength(), bytes(x).length);
-			assertEq(STRING_SLOT.sload(), x);
-		}
-	}
+        if (isTransient) {
+            slot.tstore(value);
+            assertEq(slot.tlength(), bytes(value).length);
+            assertEq(slot.tload(), value);
+        } else {
+            slot.sstore(value);
+            assertEq(slot.slength(), bytes(value).length);
+            assertEq(slot.sload(), value);
+        }
+    }
 
-	function assertAddressSlotClear() internal {
-		ADDRESS_SLOT.tclear();
-		assertEq(ADDRESS_SLOT.tload(), address(0));
-	}
+    function assertSlotEmpty(AddressSlot slot, bool isTransient) internal view {
+        if (isTransient) {
+            assertTrue(slot.isEmpty());
+            assertEq(slot.tload(), address(0));
+        } else {
+            assertEq(slot.sload(), address(0));
+        }
+    }
 
-	function assertBooleanSlotClear() internal {
-		BOOLEAN_SLOT.tclear();
-		assertEq(BOOLEAN_SLOT.tload(), false);
-	}
+    function assertSlotEmpty(BooleanSlot slot, bool isTransient) internal view {
+        if (isTransient) {
+            assertTrue(slot.isEmpty());
+            assertEq(slot.tload(), false);
+        } else {
+            assertEq(slot.sload(), false);
+        }
+    }
 
-	function assertBytes32SlotClear() internal {
-		BYTES32_SLOT.tclear();
-		assertEq(BYTES32_SLOT.tload(), bytes32(0));
-	}
+    function assertSlotEmpty(Bytes32Slot slot, bool isTransient) internal view {
+        if (isTransient) {
+            assertTrue(slot.isEmpty());
+            assertEq(slot.tload(), bytes32(0));
+        } else {
+            assertEq(slot.sload(), bytes32(0));
+        }
+    }
 
-	function assertUint256SlotClear() internal {
-		UINT256_SLOT.tclear();
-		assertEq(UINT256_SLOT.tload(), uint256(0));
-	}
+    function assertSlotEmpty(Uint256Slot slot, bool isTransient) internal view {
+        if (isTransient) {
+            assertTrue(slot.isEmpty());
+            assertEq(slot.tload(), uint256(0));
+        } else {
+            assertEq(slot.sload(), uint256(0));
+        }
+    }
 
-	function assertInt256SlotClear() internal {
-		INT256_SLOT.tclear();
-		assertEq(INT256_SLOT.tload(), int256(0));
-	}
+    function assertSlotEmpty(Int256Slot slot, bool isTransient) internal view {
+        if (isTransient) {
+            assertTrue(slot.isEmpty());
+            assertEq(slot.tload(), int256(0));
+        } else {
+            assertEq(slot.sload(), int256(0));
+        }
+    }
 
-	function assertBytesSlotClear() internal {
-		BYTES_SLOT.tclear();
-		assertEq(BYTES_SLOT.tload(), new bytes(0));
-	}
+    function assertSlotEmpty(BytesSlot slot, bool isTransient) internal view {
+        if (isTransient) {
+            assertTrue(slot.isEmpty());
+            assertEq(slot.tlength(), uint256(0));
+            assertEq(slot.tload(), new bytes(0));
+        } else {
+            assertEq(slot.slength(), uint256(0));
+            assertEq(slot.sload(), new bytes(0));
+        }
+    }
 
-	function assertStringSlotClear() internal {
-		STRING_SLOT.tclear();
-		assertEq(STRING_SLOT.tload(), new string(0));
-	}
+    function assertSlotEmpty(StringSlot slot, bool isTransient) internal view {
+        if (isTransient) {
+            assertTrue(slot.isEmpty());
+            assertEq(slot.tlength(), uint256(0));
+            assertEq(slot.tload(), new string(0));
+        } else {
+            assertEq(slot.slength(), uint256(0));
+            assertEq(slot.sload(), new string(0));
+        }
+    }
 }
