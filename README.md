@@ -6,32 +6,32 @@ A comprehensive Solidity library providing type-safe storage slot operations and
 
 This repository contains two main components designed to streamline storage management in smart contracts:
 
-- `StorageSlot`: Type-safe storage operations supporting both persistent and transient storage (EIP-1153)
-- `SlotDerivation`: Utilities for computing and deriving storage slot positions
+-   **StorageSlot**: Type-safe storage operations supporting both persistent and transient storage (EIP-1153)
+-   **SlotDerivation**: Utilities for computing and deriving storage slot positions
 
-### Features
+## Features
 
-- Read and write to persistent storage and transient storage
-- Efficient multi-slot handling for dynamic data (bytes/string)
-- Assembly-optimized operations for gas efficiency
+-   Read and write to **persistent storage** and **transient storage**
+-   Efficient multi-slot handling for dynamic data (`bytes`/`string`)
+-   Assembly-optimized operations for gas efficiency
 
-`StorageSlot` exposes user defined value types which represent slot indices. Each type has strongly typed sload and sstore for persistent storage and tload and tstore for transient storage.
+**StorageSlot** exposes user defined value types which represent slot indices. Each type has strongly typed `sload` and `sstore` for persistent storage and `tload` and `tstore` for transient storage.
 
-#### Supported Types:
+### Supported Types:
 
-- `AddressSlot`
+-   `AddressSlot`
 
-- `BooleanSlot`
+-   `BooleanSlot`
 
-- `Bytes32Slot`
+-   `Bytes32Slot`
 
-- `Uint256Slot`
+-   `Uint256Slot`
 
-- `Int256Slot`
+-   `Int256Slot`
 
-- `BytesSlot`
+-   `BytesSlot`
 
-- `StringSlot`
+-   `StringSlot`
 
 ## Installation
 
@@ -55,12 +55,12 @@ Add `storage-slot/=lib/storage-slot/src/` in `remappings.txt`
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {SlotDerivation} from "@openzeppelin/utils/SlotDerivation.sol";
 import {StorageSlot, AddressSlot, Uint256Slot} from "storage-slot/StorageSlot.sol";
-import {SlotDerivation} from "storage-slot/SlotDerivation.sol";
 
 contract Example {
-    using StorageSlot for uint256;
-    using SlotDerivation for uint256;
+    using SlotDerivation for bytes32;
+    using StorageSlot for bytes32;
 
     error ContractLocked();
     error InvalidNonce();
@@ -122,11 +122,11 @@ contract Example {
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {SlotDerivation} from "@openzeppelin/utils/SlotDerivation.sol";
 import {StorageSlot, Uint256Slot} from "storage-slot/StorageSlot.sol";
-import {SlotDerivation} from "storage-slot/SlotDerivation.sol";
 
 abstract contract ReentrancyGuard {
-    using StorageSlot for uint256;
+    using StorageSlot for bytes32;
 
     error ReentrantCall();
 
@@ -168,11 +168,11 @@ abstract contract ReentrancyGuard {
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {SlotDerivation} from "@openzeppelin/utils/SlotDerivation.sol";
 import {StorageSlot, BooleanSlot} from "storage-slot/StorageSlot.sol";
-import {SlotDerivation} from "storage-slot/SlotDerivation.sol";
 
 abstract contract ReentrancyGuardTransient {
-    using StorageSlot for uint256;
+    using StorageSlot for bytes32;
 
     error ReentrantCall();
 
@@ -266,7 +266,7 @@ library ShortStrings {
 }
 ```
 
-### EIP712
+### EIP-712
 
 [OpenZeppelin's Implementation](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/EIP712.sol)
 
@@ -274,13 +274,13 @@ library ShortStrings {
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {SlotDerivation} from "@openzeppelin/utils/SlotDerivation.sol";
 import {StorageSlot, StringSlot} from "storage-slot/StorageSlot.sol";
-import {SlotDerivation} from "storage-slot/SlotDerivation.sol";
 import {ShortStrings, ShortString} from "src/types/ShortStrings.sol";
 
 abstract contract EIP712 {
-    using ShortString for StringSlot;
-    using StorageSlot for uint256;
+    using ShortStrings for StringSlot;
+    using StorageSlot for bytes32;
 
     // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
     bytes32 private constant DOMAIN_TYPEHASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
@@ -353,23 +353,24 @@ abstract contract EIP712 {
 ### Snippet for Handling Dynamic Data (bytes/string)
 
 ```solidity
+import {SlotDerivation} from "@openzeppelin/utils/SlotDerivation.sol";
 import {StorageSlot, BytesSlot, StringSlot} from "storage-slot/StorageSlot.sol";
-import {SlotDerivation} from "storage-slot/SlotDerivation.sol";
 
-using StorageSlot for uint256;
+using StorageSlot for bytes32;
 
 BytesSlot immutable BYTES_SLOT = SlotDerivation.erc7201Slot("BYTES_SLOT").asBytesSlot();
-StringSlot immutable STRING_SLOT = SlotDerivation.erc7201Slot("STRING_SLOT").asStringSlot();
 
 bytes memory data = abi.encode(param1, param2, param3);
 BYTES_SLOT.sstore(data);
 
-require(BYTES_SLOT.slength() == data.length);
-require(keccak256(BYTES_SLOT.sload()) == keccak256(data));
+assert(BYTES_SLOT.slength() == data.length);
+assert(keccak256(BYTES_SLOT.sload()) == keccak256(data));
+
+StringSlot immutable STRING_SLOT = SlotDerivation.erc7201Slot("STRING_SLOT").asStringSlot();
 
 string memory str = "fomoweth/storage-slot";
 STRING_SLOT.sstore(str);
 
-require(STRING_SLOT.slength() == bytes(str).length);
-require(keccak256(STRING_SLOT.sload()), keccak256(bytes(str)));
+assert(STRING_SLOT.slength() == bytes(str).length);
+assert(keccak256(STRING_SLOT.sload()), keccak256(bytes(str)));
 ```

@@ -1,6 +1,8 @@
 {
 	"printWidth": 120,
 	"tabWidth": 4,
+	"useTabs": true,
+	"bracketSpacing": true,
 	"singleQuote": false,
 	"trailingComma": "all",
 	"overrides": [
@@ -9,13 +11,6 @@
 			"options": {
 				"useTabs": false,
 				"bracketSpacing": false
-			}
-		},
-		{
-			"files": "*.json",
-			"options": {
-				"useTabs": true,
-				"bracketSpacing": true
 			}
 		}
 	]
